@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magical Teddy Book 2026</title>
+    <style>
+        :root {
+            --light-pink: #fff0f3;
+            --strawberry: #ff85a1;
+            --soft-white: #ffffff;
+            --book-speed: 1.8s;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #fff0f3 0%, #ffc1cf 100%);
+            margin: 0;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            inset: 0;
+            background: var(--soft-white);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 1s;
+        }
+        .loading-screen.hide { opacity: 0; pointer-events: none; }
+        .star-spin { font-size: 50px; animation: spin 2s infinite linear; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* Book Structure */
+        .book-container { 
+            perspective: 2500px; 
+            z-index: 10;
+        }
+
+        .book {
+            width: 320px;
+            height: 480px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform var(--book-speed) cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+        }
+
+        .book.anticipation {
+            animation: gentle-float 2s ease-in-out infinite alternate;
+        }
+        @keyframes gentle-float {
+            from { transform: translateY(0px) rotateX(5deg); }
+            to { transform: translateY(-15px) rotateX(12deg); }
+        }
+
+        .cover {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 4px solid white;
+            border-radius: 5px 15px 15px 5px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 22px;
+            backface-visibility: hidden;
+            transition: transform var(--book-speed) cubic-bezier(0.645, 0.045, 0.355, 1);
+            box-shadow: 10px 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .cover.left { 
+            background: linear-gradient(135deg, #ffafbd, #ff85a1);
+            transform-origin: left;
+            z-index: 6;
+            left: 0;
+        }
+
+        .cover.left::after {
+            content: "✨ Wonders Inside ✨";
+            position: absolute;
+            width: 100%; height: 100%;
+            background: #ffe5ec;
+            color: #ff85a1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transform: rotateY(180deg);
+            backface-visibility: hidden;
+            border-radius: 15px 5px 5px 15px;
+            font-size: 18px;
+        }
+
+        .cover.right { 
+            background: linear-gradient(135deg, #ffc3a0, #ffafbd);
+            transform-origin: right;
+            right: 0;
+            z-index: 5;
+        }
+
+        .book.open { 
+            transform: rotateX(10deg) translateZ(50px); 
+            filter: drop-shadow(0 20px 40px rgba(255, 133, 161, 0.4)) brightness(1.1);
+        }
+        .book.open .cover.left { transform: rotateY(-170deg); }
+        .book.open .cover.right { transform: rotateY(170deg); }
+
+        .pages {
+            position: absolute;
+            inset: 10px;
+            background: #fff9fa;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 20px;
+            opacity: 0;
+            transform: translateZ(-10px);
+            transition: all 1s ease 0.6s;
+            box-shadow: inset 0 0 40px rgba(255, 182, 193, 0.3);
+            border: 1px solid #ffdeeb;
+            overflow: hidden;
+        }
+
+        .book.open .pages {
+            opacity: 1;
+            transform: translateZ(30px) scale(1.05);
+        }
+
+        /* Image Handling */
+        #img-container { 
+            position: relative; 
+            width: 250px; 
+            height: 250px; 
+            margin-bottom: 20px;
+            transition: all 0.8s ease;
+        }
+
+        .img-card {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 20px;
+            border: 6px solid white;
+            box-shadow: 0 10px 25px rgba(255, 133, 161, 0.3);
+            opacity: 0;
+            transform: scale(0) rotate(-10deg);
+            transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+            object-fit: cover;
+            background: #eee;
+        }
+
+        .img-card.show { 
+            opacity: 1; 
+            transform: scale(1) rotate(0deg); 
+            z-index: 10;
+        }
+
+        .img-card.hide-away { 
+            opacity: 0; 
+            transform: translateX(-150%) rotate(-45deg) scale(0.5); 
+        }
+
+        /* Final Grid View */
+        #img-container.final-view {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 10px;
+            width: 280px;
+            height: 180px;
+            margin-top: 10px;
+            position: relative;
+        }
+
+        #img-container.final-view .img-card.grid-hidden {
+            opacity: 0;
+            transform: scale(0);
+        }
+
+        #img-container.final-view .img-card.revealed {
+            opacity: 1;
+            transform: scale(1);
+            animation: cute-pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes cute-pop {
+            0% { transform: scale(0); }
+            70% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .caption {
+            position: absolute;
+            bottom: -40px;
+            width: 100%;
+            text-align: center;
+            color: #ff85a1;
+            font-size: 15px;
+            font-weight: bold;
+            opacity: 0;
+            transition: 0.5s;
+        }
+
+        .caption.show { opacity: 1; transform: translateY(-10px); }
+
+        #teddy-helper {
+            position: absolute;
+            bottom: -100px;
+            right: -80px;
+            font-size: 55px;
+            transition: all 0.8s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            z-index: 50;
+        }
+
+        #teddy-helper.appear { bottom: 0px; right: 0px; }
+        #teddy-helper.swipe { transform: translate(-120px, -20px) rotate(-30deg) scale(1.1); }
+
+        #teddy-speech {
+            position: absolute;
+            background: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            bottom: 60px;
+            right: 0;
+            border: 2px solid #ff85a1;
+            opacity: 0;
+            transition: 0.3s;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        #teddy-helper.appear #teddy-speech { opacity: 1; }
+
+        .sparkle {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            z-index: 100;
+        }
+
+        #final-greeting {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            width: 100%;
+        }
+
+        .heart-bg {
+            position: fixed;
+            top: -10%;
+            font-size: 20px;
+            color: rgba(255, 133, 161, 0.2);
+            z-index: 1;
+            animation: float-up 5s linear infinite;
+        }
+        @keyframes float-up { to { transform: translateY(110vh) rotate(360deg); } }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="loading-screen" id="loading">
+        <div class="star-spin">✨</div>
+        <p style="color: #ff85a1; font-weight: bold;">Magic is loading...</p>
+    </div>
+
+    <div class="book-container">
+        <div class="book anticipation" id="book" onclick="handleOpen()">
+            <div class="cover left">🌸<br><b>Something for you</b><br>OPEN ME</div>
+            <div class="cover right">🎀<br>OPEN ME</div>
+
+            <div class="pages" id="page-content">
+                <div id="img-container">
+                    <img src="img/11.jpg" class="img-card" id="img1">
+                    <div class="caption" id="cap1">✨ Sparkling✨</div>
+                    <img src="img/14.jpg" class="img-card" id="img2">
+                    <div class="caption" id="cap2">🌸 Teddy's Adventure 🌸</div>
+                    <img src="img/17.jpg" class="img-card" id="img3">
+                    <div class="caption" id="cap3">🎀 Magical Moments 🎀</div>
+                    <img src="img/18.jpg" class="img-card" id="img4">
+                    <div class="caption" id="cap4">💖 Sweet Memories 💖</div>
+                    <img src="img/2.jpg" class="img-card" id="img5">
+                    <div class="caption" id="cap5">🌟 Dreams 🌟</div>
+                    <img src="img/21.jpg" class="img-card" id="img6">
+                    <div class="caption" id="cap6">🧸 Forever Friends 🧸</div>
+
+                    <div id="teddy-helper">🧸<div id="teddy-speech">Next one! ✨</div></div>
+                </div>
+
+                <div id="final-greeting">
+                    <div style="font-size: 30px; animation: gentle-float 1s infinite alternate">💝</div>
+                    <h2 style="font-family: 'Great Vibes'; color: #ff4d6d; margin: 2px 0; font-size: 32px;">Just For You!</h2>
+                    <p id="typing-text" style="font-family: 'Poppins', sans-serif; color: #777; padding: 0 15px; font-size: 13px; font-style: italic; min-height: 60px; margin: 5px 0; line-height: 1.4;"></p>
+                    <button style="border: none; background: #ff85a1; color: white; padding: 8px 18px; border-radius: 20px; cursor: pointer; font-weight: bold; margin-top: 10px;" onclick="window.location.href='gallery.html'">Click to magic ✨</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const greetingMsg = "I don't no why but you are realy special for me PARO! 💕✨🧸";
+        const book = document.getElementById('book');
+        let hasOpened = false;
+
+        window.onload = () => {
+            setTimeout(() => document.getElementById('loading').classList.add('hide'), 1000);
+        };
+
+        function handleOpen() {
+            if (hasOpened) return;
+            hasOpened = true;
+            book.classList.remove('anticipation');
+            book.classList.add('open');
+            setTimeout(showImagesSequence, 1500);
+        }
+
+        async function showImagesSequence() {
+            const teddy = document.getElementById('teddy-helper');
+            const speech = document.getElementById('teddy-speech');
+            const phrases = ["Next one!", "So cute!", "Wait for it!", "Almost there!", "Last one!"];
+            
+            for(let i=1; i<=6; i++) {
+                const img = document.getElementById(`img${i}`);
+                const cap = document.getElementById(`cap${i}`);
+                
+                img.classList.add('show');
+                cap.classList.add('show');
+                await wait(2200);
+
+                if(i < 6) {
+                    speech.innerText = phrases[i-1];
+                    teddy.classList.add('appear');
+                    await wait(500);
+                    
+                    const trail = setInterval(createSparkle, 50);
+                    teddy.classList.add('swipe');
+                    
+                    img.classList.remove('show');
+                    img.classList.add('hide-away');
+                    cap.classList.remove('show');
+                    
+                    await wait(600);
+                    clearInterval(trail);
+                    teddy.classList.remove('swipe', 'appear');
+                    await wait(300);
+                } else {
+                    img.classList.remove('show');
+                    img.classList.add('hide-away');
+                    cap.classList.remove('show');
+                    await wait(800);
+                    showFinalGreeting();
+                }
+            }
+        }
+
+        function wait(ms) { return new Promise(res => setTimeout(res, ms)); }
+
+        function createSparkle() {
+            const teddy = document.getElementById('teddy-helper').getBoundingClientRect();
+            const s = document.createElement('div');
+            s.className = 'sparkle';
+            const size = Math.random() * 6 + 2;
+            s.style.width = size + 'px';
+            s.style.height = size + 'px';
+            s.style.left = (teddy.left + 20) + 'px';
+            s.style.top = (teddy.top + 20) + 'px';
+            document.body.appendChild(s);
+            s.animate([{opacity: 1}, {opacity: 0, transform: 'translateY(-20px)'}], 600).onfinish = () => s.remove();
+        }
+
+        function showFinalGreeting() {
+            const imgContainer = document.getElementById('img-container');
+            const greetBox = document.getElementById('final-greeting');
+            const target = document.getElementById('typing-text');
+            const images = [1, 2, 3, 4, 5, 6];
+
+            document.getElementById('teddy-helper').style.display = 'none';
+            imgContainer.classList.add('final-view');
+            
+            images.forEach(num => {
+                const img = document.getElementById(`img${num}`);
+                img.classList.remove('hide-away', 'show'); 
+                img.classList.add('grid-hidden');
+            });
+
+            greetBox.style.display = 'flex';
+            let charIndex = 0;
+
+            function type() {
+                if(charIndex < greetingMsg.length) {
+                    target.innerHTML += greetingMsg.charAt(charIndex);
+                    charIndex++;
+                    setTimeout(type, 35);
+                } else {
+                    revealGrid();
+                }
+            }
+            type();
+
+            function revealGrid() {
+                images.forEach((num, index) => {
+                    const img = document.getElementById(`img${num}`);
+                    setTimeout(() => {
+                        img.classList.remove('grid-hidden');
+                        img.classList.add('revealed');
+                    }, index * 150);
+                });
+                
+                for(let i=0; i<25; i++) setTimeout(createConfetti, i * 40);
+            }
+        }
+
+        function createConfetti() {
+            const c = document.createElement('div');
+            c.style.position = 'absolute';
+            c.style.width = '6px';
+            c.style.height = '6px';
+            c.style.borderRadius = '50%';
+            c.style.background = ['#ff85a1', '#ffd700', '#bde0fe', '#ffc1cf'][Math.floor(Math.random()*4)];
+            c.style.left = '50%';
+            c.style.top = '40%';
+            document.getElementById('page-content').appendChild(c);
+            c.animate([
+                { transform: 'translate(0,0) scale(1)', opacity: 1 },
+                { transform: `translate(${(Math.random()-0.5)*250}px, ${(Math.random()-0.5)*250}px) scale(0)`, opacity: 0 }
+            ], 1500).onfinish = () => c.remove();
+        }
+
+        setInterval(() => {
+            const heart = document.createElement('div');
+            heart.className = 'heart-bg';
+            heart.innerHTML = ['🌸','✨','💖','🧸'][Math.floor(Math.random()*4)];
+            heart.style.left = Math.random() * 100 + 'vw';
+            document.body.appendChild(heart);
+            setTimeout(() => heart.remove(), 5000);
+        }, 600);
+    </script>
+</body>
+</html>
